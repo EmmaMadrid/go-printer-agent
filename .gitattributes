@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+# Los golden del comparador son bytes ESC/POS crudos: cualquier conversión de
+# fin de línea los corrompería y las pruebas dejarían de significar algo.
+*.bin binary
+
+# Scripts de Windows: se quedan con CRLF.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.iss text eol=crlf

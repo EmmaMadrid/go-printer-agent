@@ -1,0 +1,117 @@
+{
+  "notas": {
+    "empresa": {
+      "nombre": "Restaurante El Mesón",
+      "direccion": "Av. Ñuño de Guzmán 1234, Col. Centro",
+      "rfc": "MEG920115AB3",
+      "tel": "667 123 4567",
+      "logoUrl": ""
+    },
+    "mesa": "5 · Salón Principal",
+    "personas": 4,
+    "mesero": "José Ramírez",
+    "cliente": "",
+    "orden": "A-12",
+    "folio": "V-000418",
+    "tipo": "Comedor",
+    "fechaApertura": "2026-09-09T18:05:00.000Z",
+    "fechaCierre": "2026-09-09T19:42:13.000Z",
+    "cajero": "Ana",
+    "lineas": [
+      { "cantidad": 2, "descripcion": "Chilaquiles verdes con pollo", "importe": 240 },
+      { "cantidad": 1, "descripcion": "Café americano", "importe": 45 },
+      { "cantidad": 3, "descripcion": "Aguachile de camarón estilo Sinaloa con extra limón", "importe": 585 },
+      { "cantidad": 1.5, "descripcion": "Kilo de carne asada", "importe": 375 }
+    ],
+    "numArticulos": 7,
+    "subtotal": 1245,
+    "descuento": 45,
+    "ivaIncluido": 165.52,
+    "propina": 120,
+    "total": 1320,
+    "pagos": [
+      { "metodo": "Efectivo", "monto": 1000 },
+      { "metodo": "Tarjeta", "monto": 320 }
+    ],
+    "efectivoRecibido": 1000,
+    "cambio": 0,
+    "software": "Sait Restaurantes POS",
+    "opciones": { "cortar": true, "abrirCajon": true, "anchoMm": 80 }
+  },
+
+  "comanda": {
+    "tipo": "comanda",
+    "folio": "V-000418",
+    "orden": "A-12",
+    "tipoVenta": "Comedor",
+    "mesa": "5 · Salón Principal",
+    "cliente": "",
+    "enviadoPor": "José Ramírez",
+    "ronda": 2,
+    "hora": "2026-09-09T18:22:41.000Z",
+    "lineas": [
+      {
+        "cantidad": 2,
+        "nombre": "Chilaquiles verdes",
+        "modificadores": [
+          { "tipo": "quitar", "descripcion": "cebolla" },
+          { "tipo": "agregar", "descripcion": "queso añejo" }
+        ],
+        "nota": "Bien doraditos"
+      },
+      { "cantidad": 1, "nombre": "Aguachile de camarón", "modificadores": [], "nota": "" }
+    ],
+    "numArticulos": 3,
+    "notaGeneral": "La mesa tiene prisa, sale primero lo frío",
+    "opciones": { "cortar": true, "anchoMm": 80 }
+  },
+
+  "kiosko": {
+    "tipo": "kiosko",
+    "empresa": { "nombre": "Sait Burgers", "direccion": "Plaza Fórum L-14", "rfc": "", "tel": "667 999 1111", "logoUrl": "" },
+    "folio": "KIO-0091",
+    "numeroOrden": "37",
+    "fecha": "2026-09-09T20:11:05.000Z",
+    "lineas": [
+      { "cantidad": 1, "descripcion": "Hamburguesa doble con papas", "importe": 189 },
+      { "cantidad": 2, "descripcion": "Refresco 600 ml", "importe": 70 }
+    ],
+    "numArticulos": 3,
+    "total": 259,
+    "tiempoEstimadoMin": 12,
+    "anchoMm": 80,
+    "opciones": { "cortar": true }
+  },
+
+  "bloques": {
+    "bloques": [
+      { "t": "txt", "v": "MI EMPRESA", "align": "center", "bold": true, "grande": true },
+      { "t": "txt", "v": "Sucursal Centro · Tel 555-1234", "align": "center" },
+      { "t": "hr" },
+      { "t": "kv", "l": "Folio", "r": "A-001" },
+      { "t": "kv", "l": "Fecha", "r": "01/07/2026 10:00" },
+      { "t": "hr" },
+      { "t": "cols", "items": [
+        { "v": "Cant", "w": 0.15, "bold": true },
+        { "v": "Descripción", "w": 0.55, "bold": true },
+        { "v": "Importe", "w": 0.3, "align": "right", "bold": true }
+      ]},
+      { "t": "cols", "items": [
+        { "v": "2", "w": 0.15 },
+        { "v": "Producto de ejemplo con nombre muy largo", "w": 0.55 },
+        { "v": "$120.00", "w": 0.3, "align": "right" }
+      ]},
+      { "t": "cols", "items": [
+        { "v": "1", "cols": 6 },
+        { "v": "Centrado", "cols": 20, "align": "center" },
+        { "v": "$54.00", "cols": 16, "align": "right" }
+      ]},
+      { "t": "hr" },
+      { "t": "kv", "l": "TOTAL", "r": "$374.00", "bold": true },
+      { "t": "feed", "n": 2 },
+      { "t": "txt", "v": "¡Gracias por su compra!", "align": "center" }
+    ],
+    "ancho": 42,
+    "opciones": { "cortar": true, "abrirCajon": false }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "port": 9911,
+  "host": "127.0.0.1",
+  "origenes": "*",
+  "notas": {
+    "type": "epson",
+    "conexion": "usb",
+    "printerName": "",
+    "red": { "host": "", "port": 9100 },
+    "width": 42,
+    "characterSet": "PC858_EURO",
+    "cortar": true,
+    "abrirCajon": true,
+    "logoPath": "",
+    "logoAnchoDots": 384
+  },
+  "carta": {
+    "printerName": "",
+    "paper": "letter"
+  },
+  "pdfTool": ""
+}

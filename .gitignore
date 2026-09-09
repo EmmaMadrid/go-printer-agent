@@ -1,0 +1,12 @@
+# Artefactos de compilación
+/dist/
+/release/
+/installer/Output/
+
+# Ayudantes de PDF: se distribuyen con el instalador, no en el repo
+/bin/*.exe
+
+# Configuración y bitácora de una estación concreta
+/config.json
+*.log
+*.log.old

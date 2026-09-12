@@ -105,7 +105,9 @@ func New(tipo string, ancho int, charset string) *Writer {
 	w := &Writer{
 		d:     d,
 		ancho: ancho,
-		enc:   encoding.ReplaceUnsupported(pc.enc.NewEncoder()),
+		// Codificador estricto a propósito: un carácter fuera de la página
+		// debe fallar para que `texto` decida cómo sustituirlo.
+		enc: pc.enc.NewEncoder(),
 	}
 	w.buf.Write(d.codePagePre)
 	w.buf.WriteByte(pc.n)
@@ -121,23 +123,56 @@ func (w *Writer) Bytes() []byte { return w.buf.Bytes() }
 // Raw agrega bytes ya listos (por ejemplo el raster de un logo).
 func (w *Writer) Raw(b []byte) { w.buf.Write(b) }
 
-// texto escribe una cadena traducida a la página de códigos activa. Un carácter
-// que no exista en esa página se sustituye, no rompe el ticket.
+// transliteracion cubre la puntuación tipográfica que suele colarse en nombres
+// de platillos copiados de un menú o de un documento: no existe en las páginas
+// de códigos de las térmicas, pero tiene un equivalente ASCII obvio.
+var transliteracion = map[rune]string{
+	'—': "-",   // — raya
+	'–': "-",   // – semirraya
+	'‒': "-",   // ‒ guion de cifra
+	'‐': "-",   // ‐ guion
+	'‘': "'",   // ‘
+	'’': "'",   // ’
+	'‚': "'",   // ‚
+	'“': "\"",  // “
+	'”': "\"",  // ”
+	'„': "\"",  // „
+	'…': "...", // …
+	'•': "*",   // • viñeta
+	' ': " ",   // espacio duro
+	'™': "TM",  // ™
+	'→': "->",  // →
+	'←': "<-",  // ←
+}
+
+// texto escribe una cadena traducida a la página de códigos activa.
+//
+// Un carácter que no exista en esa página no rompe el ticket: si tiene un
+// equivalente ASCII razonable se translitera, y si no, sale como "?" (que es lo
+// que hacía el agente JS y lo que un cajero reconoce como "aquí había algo").
 func (w *Writer) texto(s string) {
 	if s == "" {
 		return
 	}
+	// Camino rápido: casi todo texto del POS cabe completo en la página.
 	if b, err := w.enc.Bytes([]byte(s)); err == nil {
 		w.buf.Write(b)
 		return
 	}
-	// Caso extremo: el codificador falló. Se manda ASCII para no perder la línea.
 	for _, r := range s {
 		if r < 0x80 {
 			w.buf.WriteByte(byte(r))
-		} else {
-			w.buf.WriteByte('?')
+			continue
 		}
+		if b, err := w.enc.Bytes([]byte(string(r))); err == nil {
+			w.buf.Write(b)
+			continue
+		}
+		if t, ok := transliteracion[r]; ok {
+			w.buf.WriteString(t)
+			continue
+		}
+		w.buf.WriteByte('?')
 	}
 }
 

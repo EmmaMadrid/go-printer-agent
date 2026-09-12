@@ -1,0 +1,65 @@
+{
+  "empresa": {
+    "nombre": "PRUEBA — Agente Go 2.0.0",
+    "direccion": "Av. Ñuño de Guzmán 1234, Col. Centro",
+    "rfc": "MEG920115AB3",
+    "tel": "667 123 4567",
+    "logoUrl": ""
+  },
+  "mesa": "5 · Salón Principal",
+  "personas": 4,
+  "mesero": "José Ramírez",
+  "cliente": "",
+  "orden": "A-12",
+  "folio": "PRUEBA-001",
+  "tipo": "Comedor",
+  "fechaApertura": "2026-09-09T18:05:00.000Z",
+  "fechaCierre": "2026-09-09T19:42:13.000Z",
+  "cajero": "Ana",
+  "lineas": [
+    {
+      "cantidad": 2,
+      "descripcion": "Chilaquiles verdes con pollo",
+      "importe": 240
+    },
+    {
+      "cantidad": 1,
+      "descripcion": "Café americano",
+      "importe": 45
+    },
+    {
+      "cantidad": 3,
+      "descripcion": "Aguachile de camarón estilo Sinaloa con extra limón",
+      "importe": 585
+    },
+    {
+      "cantidad": 1.5,
+      "descripcion": "Kilo de carne asada",
+      "importe": 375
+    }
+  ],
+  "numArticulos": 7,
+  "subtotal": 1245,
+  "descuento": 45,
+  "ivaIncluido": 165.52,
+  "propina": 120,
+  "total": 1320,
+  "pagos": [
+    {
+      "metodo": "Efectivo",
+      "monto": 1000
+    },
+    {
+      "metodo": "Tarjeta",
+      "monto": 320
+    }
+  ],
+  "efectivoRecibido": 1000,
+  "cambio": 0,
+  "software": "Sait Restaurantes POS",
+  "opciones": {
+    "cortar": true,
+    "abrirCajon": true,
+    "anchoMm": 80
+  }
+}

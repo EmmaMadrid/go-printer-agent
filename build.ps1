@@ -57,14 +57,16 @@ Write-Host "     printer-agent.exe = $mb MB" -ForegroundColor DarkGray
 
 Write-Host '4/4  Instalador...' -ForegroundColor Cyan
 if ($Installer) {
+  # Instalación por-usuario (winget) o por-máquina (instalador oficial).
   $iscc = @(
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
     "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
   ) | Where-Object { Test-Path $_ } | Select-Object -First 1
 
   if (-not $iscc) {
     Write-Host '     Inno Setup no está instalado; se omite el instalador.' -ForegroundColor Yellow
-    Write-Host '     Descárgalo de https://jrsoftware.org/isdl.php y vuelve a correr con -Installer.' -ForegroundColor Yellow
+    Write-Host '     Instálalo con: winget install --id JRSoftware.InnoSetup -e   y vuelve a correr con -Installer.' -ForegroundColor Yellow
   } else {
     & $iscc "/DMyAppVersion=$Version" 'installer\setup.iss'
     if ($LASTEXITCODE -ne 0) { throw 'falló la generación del instalador' }

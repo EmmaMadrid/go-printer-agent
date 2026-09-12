@@ -8,7 +8,7 @@ import "fmt"
 
 // Nombre es el identificador del servicio.
 const (
-	Nombre      = "PrinterAgent"
+	Nombre      = "SaitPrinterAgent"
 	NombreLargo = "Sait Printer Agent"
 	Descripcion = "Agente local de impresión ESC/POS y de documentos en hoja completa."
 )

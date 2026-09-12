@@ -20,19 +20,22 @@ import (
 // pantalla de la caja. El precio es que los subcomandos de línea de comandos se
 // quedarían mudos, y esto lo devuelve: al correr `agent status` desde una
 // terminal, el texto aparece donde el usuario lo espera.
-func AdjuntarConsola() {
+//
+// Devuelve false cuando no hay a dónde escribir —el caso del doble clic—, para
+// que el programa hable por ventanas en vez de quedarse mudo.
+func AdjuntarConsola() bool {
 	// Si la salida ya está conectada a algo —una tubería, un archivo, o una
 	// consola heredada— no hay nada que hacer: engancharse a CONOUT$ aquí
 	// desviaría el texto fuera de esa tubería y el llamador no vería nada.
 	if salidaConectada() {
 		ponerCodificacionUTF8()
-		return
+		return true
 	}
 
 	const adjuntarAlPadre = ^uintptr(0) // ATTACH_PARENT_PROCESS
 	kernel32 := windows.NewLazySystemDLL("kernel32.dll")
 	if r, _, _ := kernel32.NewProc("AttachConsole").Call(adjuntarAlPadre); r == 0 {
-		return // no había consola padre: se ejecutó con doble clic
+		return false // no había consola padre: se ejecutó con doble clic
 	}
 
 	if f, err := os.OpenFile("CONOUT$", os.O_WRONLY, 0); err == nil {
@@ -41,6 +44,7 @@ func AdjuntarConsola() {
 		log.SetOutput(f)
 	}
 	ponerCodificacionUTF8()
+	return true
 }
 
 // salidaConectada indica si el proceso ya tiene un destino válido para stdout.

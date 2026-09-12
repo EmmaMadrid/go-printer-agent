@@ -152,3 +152,12 @@ func Guardar(cfg Config) error {
 	}
 	return os.WriteFile(Ruta(), append(raw, '\n'), 0o644)
 }
+
+// AsegurarArchivo crea el config.json con los valores de fábrica si todavía no
+// existe, para que quien instala tenga a la vista qué se puede ajustar.
+func AsegurarArchivo() error {
+	if _, err := os.Stat(Ruta()); err == nil {
+		return nil
+	}
+	return Guardar(Default())
+}

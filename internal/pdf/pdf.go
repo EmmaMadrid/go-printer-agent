@@ -48,15 +48,24 @@ var reAyudante = regexp.MustCompile(`(?i)(sumatra|pdftoprinter)`)
 
 // BuscarAyudante localiza el programa que sabe mandar un PDF a una impresora
 // por nombre. Gana la ruta configurada; si no, se busca en la carpeta bin/ del
-// agente, aceptando nombres con versión (SumatraPDF-3.6.1-64.exe).
+// agente y luego junto al ejecutable (que es donde lo deja quien copia los
+// archivos a mano), aceptando nombres con versión (SumatraPDF-3.6.1-64.exe).
 func BuscarAyudante(rutaConfigurada, baseDir string) string {
 	if rutaConfigurada != "" {
 		if st, err := os.Stat(rutaConfigurada); err == nil && !st.IsDir() {
 			return rutaConfigurada
 		}
 	}
-	bin := filepath.Join(baseDir, "bin")
-	entradas, err := os.ReadDir(bin)
+	for _, dir := range []string{filepath.Join(baseDir, "bin"), baseDir} {
+		if ruta := buscarAyudanteEn(dir); ruta != "" {
+			return ruta
+		}
+	}
+	return ""
+}
+
+func buscarAyudanteEn(dir string) string {
+	entradas, err := os.ReadDir(dir)
 	if err != nil {
 		return ""
 	}
@@ -68,10 +77,10 @@ func BuscarAyudante(rutaConfigurada, baseDir string) string {
 		}
 		base := strings.ToLower(strings.TrimSuffix(nombre, filepath.Ext(nombre)))
 		if base == "sumatrapdf" || base == "pdftoprinter" {
-			return filepath.Join(bin, nombre)
+			return filepath.Join(dir, nombre)
 		}
 		if versionado == "" && reAyudante.MatchString(nombre) {
-			versionado = filepath.Join(bin, nombre)
+			versionado = filepath.Join(dir, nombre)
 		}
 	}
 	return versionado

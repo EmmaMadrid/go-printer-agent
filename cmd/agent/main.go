@@ -7,6 +7,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -31,6 +32,17 @@ import (
 // sin control en una caja que lleva meses encendida.
 const tamanoMaximoBitacora = 5 << 20
 
+const titulo = "Sait Printer Agent"
+
+// Salida para el usuario. Con consola es la terminal; sin consola (doble clic,
+// o relanzado por UAC) se acumula y se muestra en una ventana al terminar,
+// porque el ejecutable no tiene ventana propia y de otro modo quedaría mudo.
+var (
+	hayConsola bool
+	salidaGUI  bytes.Buffer
+	out        io.Writer = os.Stdout
+)
+
 func main() {
 	var (
 		rutaConfig = flag.String("config", "", "ruta del config.json (por defecto, junto al ejecutable)")
@@ -44,18 +56,27 @@ func main() {
 		os.Exit(2)
 	}
 
-	// El servicio no tiene consola; el resto de subcomandos sí deben poder
-	// escribir en la terminal desde la que se los invocó.
 	comoServicio := winsvc.EsServicio()
 	if !comoServicio {
-		winsvc.AdjuntarConsola()
+		hayConsola = winsvc.AdjuntarConsola()
+		if !hayConsola {
+			out = &salidaGUI
+		}
 	}
 	log.SetFlags(log.Ldate | log.Ltime)
 
 	config.Init(*rutaConfig)
 
 	switch comando {
-	case "run", "":
+	case "":
+		// Sin subcomando y sin consola = doble clic en el explorador. Nadie
+		// quiere un proceso invisible: se guía al usuario a instalarlo.
+		if !comoServicio && !hayConsola {
+			dobleClic()
+			terminar(0)
+		}
+		correr(comoServicio, *puerto, *host)
+	case "run":
 		correr(comoServicio, *puerto, *host)
 	case "install":
 		salirSi(instalarServicio())
@@ -63,28 +84,29 @@ func main() {
 		salirSi(desinstalarServicio())
 	case "start":
 		salirSi(conElevacion(winsvc.Iniciar, "start"))
-		fmt.Println("Servicio iniciado.")
+		decir("Servicio iniciado.")
 	case "stop":
 		salirSi(conElevacion(winsvc.Detener, "stop"))
-		fmt.Println("Servicio detenido.")
+		decir("Servicio detenido.")
 	case "install-user":
 		salirSi(instalarTarea())
 	case "uninstall-user":
 		salirSi(winsvc.DesinstalarTarea())
-		fmt.Println("Tarea de inicio de sesión eliminada.")
+		decir("Tarea de inicio de sesión eliminada.")
 	case "status":
 		estado()
 	case "printers":
 		listarImpresoras()
 	case "version":
-		fmt.Printf("printer-agent %s\n", httpapi.Version)
+		decir("printer-agent %s", httpapi.Version)
 	case "help", "-h", "--help":
 		uso()
 	default:
 		fmt.Fprintf(os.Stderr, "Subcomando desconocido: %s\n\n", comando)
 		uso()
-		os.Exit(2)
+		terminar(2)
 	}
+	terminar(0)
 }
 
 // separarComando extrae el primer argumento si no es una bandera, para poder
@@ -116,6 +138,52 @@ Subcomandos:
 Banderas:
 `, httpapi.Version, filepath.Base(os.Args[0]))
 	flag.PrintDefaults()
+}
+
+// ── Salida al usuario ──────────────────────────────────────────────────────
+
+func decir(formato string, a ...any) {
+	fmt.Fprintf(out, formato+"\n", a...)
+}
+
+// terminar cierra el programa; sin consola, antes muestra lo acumulado en
+// una ventana para que el usuario sepa qué pasó.
+func terminar(codigo int) {
+	if !hayConsola && salidaGUI.Len() > 0 {
+		winsvc.Avisar(titulo, strings.TrimSpace(salidaGUI.String()), codigo != 0)
+	}
+	os.Exit(codigo)
+}
+
+func salirSi(err error) {
+	if err != nil {
+		decir("Error: %v", err)
+		terminar(1)
+	}
+}
+
+// dobleClic es lo que pasa al abrir el .exe desde el explorador: si el
+// servicio ya está, se confirma y se abre el estado en el navegador; si no,
+// se ofrece instalarlo ahí mismo.
+func dobleClic() {
+	cfg := config.Cargar()
+	url := fmt.Sprintf("http://localhost:%d/status", cfg.Port)
+
+	if st, err := winsvc.Estado(); err == nil && st == "en ejecución" {
+		winsvc.Avisar(titulo, fmt.Sprintf(
+			"El agente ya está instalado como servicio de Windows y en ejecución.\n\n%s\n\n"+
+				"Configura la impresora desde el POS: Configuración → Impresoras.", url), false)
+		winsvc.AbrirNavegador(url)
+		return
+	}
+
+	if !winsvc.Preguntar(titulo,
+		"El agente de impresión no está instalado como servicio.\n\n"+
+			"¿Instalarlo ahora para que arranque solo con Windows?\n\n"+
+			"(Se pedirá permiso de administrador.)") {
+		return
+	}
+	salirSi(instalarServicio())
 }
 
 // ── Ejecución ──────────────────────────────────────────────────────────────
@@ -197,22 +265,31 @@ func instalarServicio() error {
 	if err != nil {
 		return err
 	}
-	if err := conElevacion(func() error { return winsvc.Instalar(exe, "run") }, "install"); err != nil {
-		return err
-	}
-	if err := winsvc.Iniciar(); err != nil {
-		return fmt.Errorf("el servicio quedó instalado pero no arrancó: %w", err)
-	}
-	fmt.Printf("Servicio %q instalado y en ejecución.\n", winsvc.NombreLargo)
-	fmt.Println("Configura la impresora desde el POS: Configuración → Impresoras.")
-	return nil
+	return conElevacion(func() error {
+		// Un agente abierto a mano estaría ocupando el puerto del servicio.
+		winsvc.MatarInstanciasSueltas()
+		if err := config.AsegurarArchivo(); err != nil {
+			return fmt.Errorf("no se pudo crear config.json: %w", err)
+		}
+		if err := winsvc.Instalar(exe, "run"); err != nil {
+			return err
+		}
+		if err := winsvc.Iniciar(); err != nil {
+			return fmt.Errorf("el servicio quedó instalado pero no arrancó: %w", err)
+		}
+		cfg := config.Cargar()
+		decir("Servicio %q instalado y en ejecución.", winsvc.NombreLargo)
+		decir("Escucha en http://localhost:%d · config: %s", cfg.Port, config.Ruta())
+		decir("Configura la impresora desde el POS: Configuración → Impresoras.")
+		return nil
+	}, "install")
 }
 
 func desinstalarServicio() error {
 	if err := conElevacion(winsvc.Desinstalar, "uninstall"); err != nil {
 		return err
 	}
-	fmt.Println("Servicio desinstalado.")
+	decir("Servicio desinstalado.")
 	return nil
 }
 
@@ -221,23 +298,30 @@ func instalarTarea() error {
 	if err != nil {
 		return err
 	}
+	winsvc.MatarInstanciasSueltas()
+	if err := config.AsegurarArchivo(); err != nil {
+		return fmt.Errorf("no se pudo crear config.json: %w", err)
+	}
 	if err := winsvc.InstalarTarea(exe); err != nil {
 		return err
 	}
 	if err := winsvc.IniciarTarea(); err != nil {
 		return fmt.Errorf("la tarea quedó registrada pero no arrancó: %w", err)
 	}
-	fmt.Println("Agente registrado para arrancar al iniciar sesión, y ya está corriendo.")
+	decir("Agente registrado para arrancar al iniciar sesión, y ya está corriendo.")
 	return nil
 }
 
 // conElevacion corre una operación que exige permisos de administrador; si el
-// proceso no los tiene, se relanza pidiéndolos por UAC y termina.
+// proceso no los tiene, se relanza pidiéndolos por UAC y termina. El proceso
+// elevado no tiene consola: reporta su resultado en una ventana.
 func conElevacion(fn func() error, subcomando string) error {
 	if winsvc.Elevado() {
 		return fn()
 	}
-	fmt.Println("Esta operación necesita permisos de administrador; se pedirá confirmación…")
+	if hayConsola {
+		decir("Esta operación necesita permisos de administrador; se pedirá confirmación…")
+	}
 	if err := winsvc.Reelevar([]string{subcomando}); err != nil {
 		return fmt.Errorf("no se pudo elevar a administrador: %w", err)
 	}
@@ -251,37 +335,37 @@ func estado() {
 	cfg := config.Cargar()
 	destino := printing.DestinoDe(cfg.Notas)
 
-	fmt.Printf("printer-agent %s\n", httpapi.Version)
-	fmt.Printf("Config:    %s\n", config.Ruta())
-	fmt.Printf("Escucha:   http://%s:%d\n", cfg.Host, cfg.Port)
+	decir("printer-agent %s", httpapi.Version)
+	decir("Config:    %s", config.Ruta())
+	decir("Escucha:   http://%s:%d", cfg.Host, cfg.Port)
 
 	if st, err := winsvc.Estado(); err == nil {
-		fmt.Printf("Servicio:  %s\n", st)
+		decir("Servicio:  %s", st)
 	} else {
-		fmt.Printf("Servicio:  %v\n", err)
+		decir("Servicio:  %v", err)
 	}
 
-	fmt.Printf("Notas:     %s (%s, %d columnas)", destino.Etiqueta(), cfg.Notas.Type, cfg.Notas.Width)
+	linea := fmt.Sprintf("Notas:     %s (%s, %d columnas)", destino.Etiqueta(), cfg.Notas.Type, cfg.Notas.Width)
 	if !destino.EsRed() && destino.Printer != "" {
-		fmt.Printf(" · estado: %s", printing.Estado(destino.Printer))
+		linea += " · estado: " + printing.Estado(destino.Printer)
 	}
-	fmt.Println()
+	decir("%s", linea)
 
 	carta := cfg.Carta.PrinterName
 	if carta == "" {
 		carta = "(predeterminada: " + printing.Predeterminada() + ")"
 	}
-	fmt.Printf("Carta:     %s\n", carta)
+	decir("Carta:     %s", carta)
 }
 
 func listarImpresoras() {
 	nombres, err := printing.Listar()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "No se pudieron listar las impresoras: %v\n", err)
-		os.Exit(1)
+		decir("No se pudieron listar las impresoras: %v", err)
+		terminar(1)
 	}
 	if len(nombres) == 0 {
-		fmt.Println("No hay impresoras instaladas en esta PC.")
+		decir("No hay impresoras instaladas en esta PC.")
 		return
 	}
 	predeterminada := printing.Predeterminada()
@@ -290,13 +374,6 @@ func listarImpresoras() {
 		if n == predeterminada {
 			marca = "*"
 		}
-		fmt.Printf(" %s %s\n", marca, n)
-	}
-}
-
-func salirSi(err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		decir(" %s %s", marca, n)
 	}
 }

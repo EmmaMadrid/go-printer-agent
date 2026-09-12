@@ -18,8 +18,8 @@ var errSoloWindows = fmt.Errorf("los servicios y tareas solo están disponibles 
 // EsServicio siempre es falso fuera de Windows.
 func EsServicio() bool { return false }
 
-// AdjuntarConsola no hace nada fuera de Windows.
-func AdjuntarConsola() {}
+// AdjuntarConsola no hace nada fuera de Windows: siempre hay consola.
+func AdjuntarConsola() bool { return true }
 
 // Elevado siempre es falso fuera de Windows.
 func Elevado() bool { return false }
@@ -53,3 +53,15 @@ func DesinstalarTarea() error { return errSoloWindows }
 
 // IniciarTarea no aplica fuera de Windows.
 func IniciarTarea() error { return errSoloWindows }
+
+// Avisar no aplica fuera de Windows: se imprime en la salida estándar.
+func Avisar(titulo, texto string, esError bool) { fmt.Println(titulo + ": " + texto) }
+
+// Preguntar no aplica fuera de Windows: siempre responde que no.
+func Preguntar(titulo, texto string) bool { return false }
+
+// AbrirNavegador no aplica fuera de Windows.
+func AbrirNavegador(url string) {}
+
+// MatarInstanciasSueltas no aplica fuera de Windows.
+func MatarInstanciasSueltas() {}
